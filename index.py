@@ -1,8 +1,14 @@
 import sys
-from PySide6.QtWidgets import QApplication, QPushButton
+from main_window import MainWindow
+from PySide6.QtWidgets import QApplication, QLabel
 
-app = QApplication(sys.argv)
-button = QPushButton('Texto do botão')
-button.show()
 
-app.exec()
+if __name__ == "__main__":
+  app = QApplication(sys.argv)
+  window = MainWindow()
+  
+  label1 = QLabel('Hello World')
+  window.v_layout.addWidget(label1)
+  
+  window.show()
+  app.exec()
