@@ -1,11 +1,11 @@
 import sys
-from main_window import MainWindow
-from display import Display
-from info import Info
+from components.main_window import MainWindow
+from components.display import Display
+from components.info import Info
 from environment import WINDOW_ICON_PATH
 from PySide6.QtWidgets import QApplication, QLabel
 from PySide6.QtGui import QIcon
-from styles import setupTheme
+from styles.styles import setupTheme
 
 if __name__ == "__main__":
   app = QApplication(sys.argv)

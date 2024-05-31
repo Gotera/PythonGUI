@@ -15,8 +15,6 @@ qss = f"""
         background: {DARKEST_PRIMARY_COLOR};
     }}
 """
-
-
 def setupTheme():
     qdarktheme.setup_theme(
         theme='dark',
