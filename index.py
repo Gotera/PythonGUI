@@ -17,13 +17,13 @@ if __name__ == "__main__":
   window.setWindowIcon(icon)
   app.setWindowIcon(icon)
   
-  info = Info('Testeee')
+  info = Info('Sua conta')
   window.addWidgetToVLayout(info)
   
   display = Display()
   window.addWidgetToVLayout(display)
   
-  buttonsGrid = ButtonsGrid(display)
+  buttonsGrid = ButtonsGrid(display, info)
   window.vLayout.addLayout(buttonsGrid)
   
   window.adjustFixedSize()
