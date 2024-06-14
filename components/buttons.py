@@ -8,6 +8,7 @@ import math
 if TYPE_CHECKING:
     from display import Display
     from info import Info
+    from main_window import MainWindow
 
 
 class Button(QPushButton):
@@ -20,7 +21,7 @@ class Button(QPushButton):
 
 
 class ButtonsGrid(QGridLayout):
-    def __init__(self, display: 'Display', info: 'Info', *args, **kwargs):
+    def __init__(self, display: 'Display', info: 'Info', window: 'MainWindow', *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self._gridMask = [
@@ -32,6 +33,7 @@ class ButtonsGrid(QGridLayout):
         ]
         self.display = display
         self.info = info
+        self.window = window
         self._equation = ''
         self._equationInitialValue = 'Your Calculation'
         self._left = None
@@ -50,6 +52,10 @@ class ButtonsGrid(QGridLayout):
         self.info.setText(value)
 
     def _makeGrid(self):
+        self.display.eqTriggered.connect(lambda: print(123))
+        self.display.delTriggered.connect(self.display.backspace)
+        self.display.clearTriggered.connect(lambda: print(123))
+        
         for i, row in enumerate(self._gridMask):
             for j, button_text in enumerate(row):
                 button = Button(button_text)
@@ -78,11 +84,11 @@ class ButtonsGrid(QGridLayout):
                 button,
                 self._makeSlot(self._operatorClicked, button)
             )
-            
-        if text in "◀":
+
+        if text == "◀":
             self._connectButtonClicked(button, self.display.backspace)
-            
-        if text in "=":
+
+        if text == "=":
             self._connectButtonClicked(
                 button,
                 self._connectButtonClicked(button, self._eq)
@@ -99,6 +105,7 @@ class ButtonsGrid(QGridLayout):
         newDisplayValue = self.display.text() + buttonText
 
         if not isValidNumber(newDisplayValue):
+            self._showError('Você não digitou nada.')
             return
 
         self.display.insert(buttonText)
@@ -116,39 +123,52 @@ class ButtonsGrid(QGridLayout):
         self.display.clear()
 
         if not isValidNumber(displayText) and self._left is None:
-            print('Nada')
+            self._showError('Você não digitou nada.')
             return
 
         if self._left is None:
             self._left = float(displayText)
-            
+
         self._op = buttonText
         self.equation = f'{self._left} {self._op} ??'
-        
+
     def _eq(self):
         displatText = self.display.text()
-        
+
         if not isValidNumber(displatText):
+            self._showError('Você não digitou o outro número da conta.')
             return
-        
+
         self._right = float(displatText)
         self.equation = f'{self._left} {self._op} {self._right}'
         result = 'error'
-        
+
         try:
             if '^' in self.equation and isinstance(self._left, float):
                 result = math.pow(self._left, self._right)
             else:
                 result = eval(self.equation)
         except ZeroDivisionError:
-            print('')
+            self._showError('Divisão por zero.')
         except OverflowError:
-            print('')
-        
+            self._showError('Conta não pode ser realizada.')
+
         self.display.clear()
         self.info.setText(f'{self.equation} = {result}')
         self._left = result
         self._right = None
-        
+
         if result == 'error':
             self._left = None
+
+    def _showError(self, text):
+        msgBox = self.window.makeMsgBox()
+        msgBox.setText(text)
+        msgBox.setIcon(msgBox.Icon.Critical)
+        msgBox.exec()
+
+    def _showInfo(self, text):
+        msgBox = self.window.makeMsgBox()
+        msgBox.setText(text)
+        msgBox.setIcon(msgBox.Icon.Critical)
+        msgBox.exec()
