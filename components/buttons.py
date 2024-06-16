@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import QPushButton, QGridLayout
 from PySide6.QtCore import Slot
 from environment import MEDIUM_FONT_SIZE
-from utils.verify_buttons import isValidNumber, isNumOrDot, isEmpty
+from utils.verifications import isValidNumber, isNumOrDot, isEmpty, convertToNumber
 from typing import TYPE_CHECKING
 import math
 
@@ -29,7 +29,7 @@ class ButtonsGrid(QGridLayout):
             ['7', '8', '9', '*'],
             ['4', '5', '6', '-'],
             ['1', '2', '3', '+'],
-            ['',  '0', '.', '='],
+            ['N',  '0', '.', '='],
         ]
         self.display = display
         self.info = info
@@ -51,23 +51,28 @@ class ButtonsGrid(QGridLayout):
         self._equation = value
         self.info.setText(value)
 
+    def testString(self, *args):
+        print(type(self).__name__, args)
+
     def _makeGrid(self):
-        self.display.eqTriggered.connect(lambda: print(123))
+        self.display.eqTriggered.connect(self._eq)
         self.display.delTriggered.connect(self.display.backspace)
-        self.display.clearTriggered.connect(lambda: print(123))
+        self.display.clearTriggered.connect(self._clear)
+        self.display.inputTriggered.connect(self._insertToDisplay)
+        self.display.operatorTriggered.connect(self._configLeftOperation)
         
         for i, row in enumerate(self._gridMask):
-            for j, button_text in enumerate(row):
-                button = Button(button_text)
+            for j, buttonText in enumerate(row):
+                button = Button(buttonText)
 
-                if not isNumOrDot(button_text) and not isEmpty(button_text):
+                if not isNumOrDot(buttonText) and not isEmpty(buttonText):
                     button.setProperty('cssClass', 'specialButton')
                     self._configSpecialButton(button)
 
                 self.addWidget(button, i, j)
                 buttonSlot = self._makeSlot(
-                    self._insertButtonValueInDisplay,
-                    button
+                    self._insertToDisplay,
+                    buttonText
                 )
                 self._connectButtonClicked(button, buttonSlot)
 
@@ -76,13 +81,14 @@ class ButtonsGrid(QGridLayout):
 
     def _configSpecialButton(self, button):
         text = button.text()
+        
         if text == "C":
             self._connectButtonClicked(button, self._clear)
 
         if text in "+-/*^":
             self._connectButtonClicked(
                 button,
-                self._makeSlot(self._operatorClicked, button)
+                self._makeSlot(self._configLeftOperation, text)
             )
 
         if text == "◀":
@@ -93,6 +99,12 @@ class ButtonsGrid(QGridLayout):
                 button,
                 self._connectButtonClicked(button, self._eq)
             )
+        
+        if text == "N":
+            self._connectButtonClicked(
+                button,
+                self._connectButtonClicked(button, self._invertNumber)
+            )
 
     def _makeSlot(self, func, *args, **kwargs):
         @Slot(bool)
@@ -100,16 +112,26 @@ class ButtonsGrid(QGridLayout):
             func(*args, **kwargs)
         return realSlot
 
-    def _insertButtonValueInDisplay(self, button):
-        buttonText = button.text()
-        newDisplayValue = self.display.text() + buttonText
+    @Slot()
+    def _invertNumber(self):
+        displayText = self.display.text()
+        
+        if not isValidNumber(displayText):
+            return
+    
+        number = convertToNumber(displayText) * -1
+        self.display.setText(str(number))
+    
+    @Slot()
+    def _insertToDisplay(self, text):
+        newDisplayValue = self.display.text() + text
 
         if not isValidNumber(newDisplayValue):
-            self._showError('Você não digitou nada.')
             return
 
-        self.display.insert(buttonText)
+        self.display.insert(text)
 
+    @Slot()
     def _clear(self):
         self._left = None
         self._right = None
@@ -117,21 +139,21 @@ class ButtonsGrid(QGridLayout):
         self.equation = self._equationInitialValue
         self.display.clear()
 
-    def _operatorClicked(self, button):
-        buttonText = button.text()
+    @Slot()
+    def _configLeftOperation(self, text):
         displayText = self.display.text()
         self.display.clear()
 
         if not isValidNumber(displayText) and self._left is None:
-            self._showError('Você não digitou nada.')
             return
 
         if self._left is None:
-            self._left = float(displayText)
+            self._left = convertToNumber(displayText)
 
-        self._op = buttonText
+        self._op = text
         self.equation = f'{self._left} {self._op} ??'
 
+    @Slot()
     def _eq(self):
         displatText = self.display.text()
 
@@ -139,12 +161,12 @@ class ButtonsGrid(QGridLayout):
             self._showError('Você não digitou o outro número da conta.')
             return
 
-        self._right = float(displatText)
+        self._right = convertToNumber(displatText)
         self.equation = f'{self._left} {self._op} {self._right}'
         result = 'error'
 
         try:
-            if '^' in self.equation and isinstance(self._left, float):
+            if '^' in self.equation and isinstance(self._left, convertToNumber):
                 result = math.pow(self._left, self._right)
             else:
                 result = eval(self.equation)
